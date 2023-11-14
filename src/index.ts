@@ -1,11 +1,7 @@
 #! /usr/bin/env node
-import fs from "fs";
-import path from "path";
 import figlet from "figlet";
 import chalk from "chalk";
 import inquirer from "inquirer";
-import ora from "ora";
-import url from "url";
 
 console.log(chalk.green(figlet.textSync("Dir Manager")));
 
@@ -28,83 +24,24 @@ async function mainMenu() {
   return command;
 }
 
-async function listDirContents() {
-  // Ask the user for the directory path
-  const answers = await inquirer.prompt([
-    {
-      type: "input",
-      name: "dirPath",
-      message: "Enter the directory path to list contents:",
-      default: ".", // Default to the current directory
-    },
-  ]);
-
-  const directoryPath = answers.dirPath;
-  const spinner = ora("Listing directory contents").start();
-  console.log("\n");
-  try {
-    const files = await fs.promises.readdir(directoryPath);
-    const detailedFilesPromises = files.map(async (file: string) => {
-      let fileDetails = await fs.promises.lstat(
-        path.resolve(directoryPath, file),
-      );
-      const { size, birthtime } = fileDetails;
-      return { "filename": file, "size(KB)": size, "created_at": birthtime };
-    });
-    const detailedFiles = await Promise.all(detailedFilesPromises);
-
-    console.table(detailedFiles);
-    spinner.succeed("Directory listed");
-  } catch (error: any) {
-    spinner.fail("Error occurred while reading the directory");
-    console.error(chalk.red(error.message));
-  }
-}
-async function createDir() {
-  const answers = await inquirer.prompt([
-    {
-      type: "input",
-      name: "dirPath",
-      message: "Enter directory path to create:",
-    },
-  ]);
-  const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
-  const filepath = path.resolve(__dirname, answers.dirPath);
-  if (!fs.existsSync(filepath)) {
-    fs.mkdirSync(filepath);
-    console.log(chalk.green("The directory has been created successfully"));
-  } else {
-    console.log(chalk.yellow("Directory already exists"));
-  }
-}
-
-async function createFile() {
-  const answers = await inquirer.prompt([
-    {
-      type: "input",
-      name: "filePath",
-      message: "Enter file path to create:",
-    },
-  ]);
-  const filepath = path.resolve(__dirname, answers.filePath);
-  fs.openSync(filepath, "w");
-  console.log(chalk.green("An empty file has been created"));
-}
-
 async function run() {
   let command = await mainMenu();
 
   switch (command) {
     case "list":
       // Call your function to list directory contents
-      await listDirContents(); // You might want to modify this function to ask for a directory path
+      const listDirContents = (await import("./commands/listDirContents.js"))
+        .default;
+      await listDirContents();
       break;
     case "mkdir":
       // Call your function to create a directory
+      const createDir = (await import("./commands/createDir.js")).default;
       await createDir();
       break;
     case "touch":
       // Call your function to create a file
+      const createFile = (await import("./commands/createFile.js")).default;
       await createFile();
       break;
     case "exit":
